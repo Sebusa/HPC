@@ -1,4 +1,4 @@
-// mxm matrix multiplication
+// matrix multiplication with threads
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
