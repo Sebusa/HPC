@@ -8,72 +8,94 @@
 // Functions declarations
 int **initialize(int n);
 void input(int **matrix, int n);
-void bruteForce(int **A, int **B, int **result, int n);
-void printResult(int **matrix, int n);
+void *bruteForce(void *threadarg);
+
+// Thread structure
+struct thread
+{
+    int **A;
+    int **B;
+    int **result;
+    int n;
+    int ID;
+};
 
 // CMD arguments
 int main(int argc, char *argv[])
 {
-    if (argc >= 2)
+    if (argc >= 3)
     {
         // CPU clock
         clock_t start, end;
         double cpu_time_used;
         start = clock();
 
-        // Matrix declaration
+        // CMD parameters
         int n = atoi(argv[1]);
-        int **a, **b;
+        int T = atoi(argv[2]);
 
-        a = initialize(n);
-        b = initialize(n);
+        // Threads declaration
+        pthread_t *threads[T];
+        struct thread *data[T];
 
-        input(a, n);
-        input(b, n);
-
-        int **result;
-        result = initialize(n);
-
-        // Matrix multiplication with O(n^3) algorithm
-        bruteForce(a, b, result, n);
-
-        if (argc == 3)
+        // Matrix declaration
+        for (int i = 0; i < T; i++)
         {
-            if (strcmp(argv[2], "print") == 0)
-            {
-                printf("\nThe matrix A is:\n");
-                printResult(a, n);
-
-                printf("\nThe matrix B is:\n");
-                printResult(b, n);
-
-                printf("\nThe result is:\n");
-                printResult(result, n);
-            }
-            else
-            {
-                printf("You must put 'print' as your printer argument!\n");
-            }
+            data[i] = (struct thread *)malloc(sizeof(struct thread));
+            data[i]->ID = i;
+            data[i]->A = initialize(n);
+            data[i]->B = initialize(n);
+            data[i]->result = initialize(n);
+            data[i]->n = n;
         }
+
+        // Matrix input
+        input(data[0]->A, n);
+        input(data[0]->B, n);
+
+        // Threads creation
+        for (int i = 0; i < T; i++)
+        {
+            pthread_create(threads[i], NULL, bruteForce, (void *)data[i]);
+        }
+
+        /* Threads join
+        for (int i = 0; i < T; i++)
+        {
+            pthread_join(threads[i], NULL);
+        }
+        */
 
         // End clock
         end = clock();
         cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
         printf("Time: %f \n", cpu_time_used);
 
-        //Free memory
-        for (int i = 0; i < n; i++)
+        // Free memory
+        for (int i = 0; i < T; i++)
         {
-            free(a[i]);
-            free(b[i]);
-            free(result[i]);
+            free(data[i]->A);
+            free(data[i]->B);
+            free(data[i]->result);
+            free(data[i]);
         }
+        pthread_exit(NULL);
     }
     return 0;
 }
 
-void bruteForce(int **A, int **B, int **result, int n)
+void *bruteForce(void *threadarg)
 {
+    // Thread data
+    struct thread *data;
+    data = (struct thread *)threadarg;
+    int **A = data->A;
+    int **B = data->B;
+    int **result = data->result;
+    int n = data->n;
+    int ID = data->ID;
+
+    // Brute force
     for (int i = 0; i < n; i++)
     {
         for (int j = 0; j < n; j++)
@@ -85,14 +107,16 @@ void bruteForce(int **A, int **B, int **result, int n)
             }
         }
     }
+
+    pthread_exit(NULL);
 }
 
 int **initialize(int n)
 {
-    int **matrix = (int **)malloc(n * sizeof(int *));
+    int **matrix = (int **)calloc(n, sizeof(int *));
     for (int i = 0; i < n; i++)
     {
-        matrix[i] = (int *)malloc(n * sizeof(int));
+        matrix[i] = (int *)calloc(n, sizeof(int));
     }
     return matrix;
 }
@@ -107,17 +131,5 @@ void input(int **matrix, int n)
         {
             matrix[i][j] = 1 + rand() % 9;
         }
-    }
-}
-
-void printResult(int **matrix, int n)
-{
-    for (int i = 0; i < n; i++)
-    {
-        for (int j = 0; j < n; j++)
-        {
-            printf("%d\t", matrix[i][j]);
-        }
-        printf("\n");
     }
 }

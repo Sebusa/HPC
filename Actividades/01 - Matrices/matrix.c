@@ -88,10 +88,10 @@ void bruteForce(int **A, int **B, int **result, int n)
 
 int **initialize(int n)
 {
-    int **matrix = (int **)malloc(n * sizeof(int *));
+    int **matrix = (int **)calloc(n, sizeof(int *));
     for (int i = 0; i < n; i++)
     {
-        matrix[i] = (int *)malloc(n * sizeof(int));
+        matrix[i] = (int *)calloc(n, sizeof(int));
     }
     return matrix;
 }
