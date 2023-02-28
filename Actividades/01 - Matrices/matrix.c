@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
         // End clock
         end = clock();
         cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
-        printf("Time: %f \n", cpu_time_used);
+        printf("%f\n", cpu_time_used);
 
         //Free memory
         for (int i = 0; i < n; i++)
