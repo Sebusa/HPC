@@ -18,6 +18,7 @@ struct thread
     int **B;
     int **result;
     int n;
+    int T;
 };
 
 // CMD arguments
@@ -35,42 +36,43 @@ int main(int argc, char *argv[])
         int T = atoi(argv[2]);
 
         // Threads declaration
-        pthread_t *threads[T];
+        pthread_t threads[T];
         struct thread *data[T];
 
         // Matrix input
-        int **a, **b;
+        int **a, **b, **result;
         a = initialize(n);
         b = initialize(n);
+        result = initialize(n);
         input(a, n);
         input(b, n);
-
-        // Matrix declaration
-        for (int i = 0; i < T; i++)
-        {
-            threads[i] = (pthread_t *)malloc(sizeof(pthread_t));
-            data[i] = (struct thread *)malloc(sizeof(struct thread));
-            data[i]->ID = i+1;
-            data[i]->A = a;
-            data[i]->B = b;
-            data[i]->result = initialize(n);
-            data[i]->n = n;
-        }
 
         // Threads creation
         for (int i = 0; i < T; i++)
         {
-            printf("Thread %d created\n", data[i]->ID);
-            pthread_create(threads[i], NULL, bruteForce, (void *)data[i]);
+            data[i] = (struct thread *)malloc(sizeof(struct thread));
+            data[i]->ID = i + 1;
+            data[i]->A = a;
+            data[i]->B = b;
+            data[i]->result = result;
+            data[i]->n = n;
+            data[i]->T = T;
+
+            pthread_create(&threads[i], NULL, bruteForce, (void *)data[i]);
         }
 
+        // Join threads
+        for (int i = 0; i < T; i++)
+        {
+            pthread_join(threads[i], NULL);
+        }
 
         // End clock
         end = clock();
         cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
         printf("%f\n", cpu_time_used);
 
-        //Free threads memory
+        //THreads destruction
         pthread_exit(NULL);
     }
     return 0;
@@ -82,14 +84,19 @@ void *bruteForce(void *threadarg)
     struct thread *data;
     data = (struct thread *)threadarg;
 
+    int ID = data->ID;
     int **A = data->A;
     int **B = data->B;
     int **result = data->result;
     int n = data->n;
-    int ID = data->ID;
+    int T = data->T;
+
+    // Distribution
+    int start = (ID - 1) * (n / T);
+    int end = ID * (n / T);
 
     // Brute force
-    for (int i = 0; i < n; i++)
+    for (int i = start; i < end; i++)
     {
         for (int j = 0; j < n; j++)
         {
@@ -99,7 +106,7 @@ void *bruteForce(void *threadarg)
                 result[i][j] += A[i][k] * B[k][j];
             }
         }
-    }    
+    }
 }
 
 int **initialize(int n)
