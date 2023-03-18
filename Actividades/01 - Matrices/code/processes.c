@@ -3,9 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <time.h> // Have no idea why the time seed doesn't work with sys/time
-#include <sys/time.h>
 #include <sys/wait.h>
+#include <sys/time.h>
+#include <time.h> // Have no fucking idea why with sys/time.h it doesn't work
 
 // Functions declarations
 int **initialize(int n);
@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
 {
     if (argc >= 3)
     {
-        srand(time(NULL));       // Random seed
+        srand(time(NULL));           // Random seed
         pid_t PROCESS_ID = getpid(); // Parent process ID
 
         // CPU clock
@@ -42,16 +42,24 @@ int main(int argc, char *argv[])
         result = initialize(n);
 
         // Process creation
-        pid_t pid = getppid(); // Parent process ID
+        pid_t pid = getpid(); // Actual process ID
 
-        for (int i = 0; i < P; i++)
+        // We don't need to create a new process for the last one as we already count the parent process
+        for (int i = 0; i < P-1; i++)
         {
-            int parameters[3] = {n, P, i + 1};
+            int parameters[3] = {n, P, i + 1}; // Matrix size, number of processes, process ID
+
             if (pid != 0) // Parent process
             {
                 bruteForce(a, b, result, parameters);
-                pid = fork();
-                wait(NULL);
+
+                wait(NULL); // Wait for the child process to finish
+                pid = fork(); // Create a new child process
+            }
+            else if(pid == -1) // Error
+            {
+                printf("Error creating the process.\n");
+                return 1;
             }
         }
 
@@ -118,6 +126,11 @@ void bruteForce(int **A, int **B, int **result, int parameters[3])
 
     // Distribute the work
     int start, end;
+    if (P == 0) // Avoid division by zero
+    {
+        P = 1;
+    }
+
     if (id % P == 0)
     {
         start = (id - 1) * (n / P);
@@ -129,6 +142,7 @@ void bruteForce(int **A, int **B, int **result, int parameters[3])
         end = id * (n / P) + (n % P);
     }
 
+    // Matrix multiplication
     for (int i = 0; i < n; i++)
     {
         for (int j = 0; j < n; j++)
