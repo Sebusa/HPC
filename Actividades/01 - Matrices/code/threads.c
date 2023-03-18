@@ -18,10 +18,11 @@ int main(int argc, char *argv[])
 {
     if (argc >= 3)
     {
+        srand(time(NULL)); // Random seed
+
         // CPU clock
         struct timeval TSTART, TEND;
         double TIME;
-
         gettimeofday(&TSTART, NULL);
 
         // CMD parameters
@@ -112,8 +113,7 @@ int **initialize(int n)
 
 void input(int **matrix, int n)
 {
-    srand(time(NULL)); // Random seed
-                       // Random input
+    // Random input
     for (int i = 0; i < n; i++)
     {
         for (int j = 0; j < n; j++)

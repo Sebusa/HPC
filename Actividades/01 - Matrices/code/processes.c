@@ -2,27 +2,34 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <unistd.h>
-#include <sys/types.h> // pid_t
+#include <time.h> // Have no idea why the time seed doesn't work with sys/time
+#include <sys/time.h>
+#include <sys/wait.h>
 
 // Functions declarations
 int **initialize(int n);
 void input(int **matrix, int n);
-void bruteForce(int **A, int **B, int **result, int n);
+void bruteForce(int **A, int **B, int **result, int parameters[3]);
 
 // CMD arguments
 int main(int argc, char *argv[])
 {
-    if (argc >= 2)
+    if (argc >= 3)
     {
+        srand(time(NULL));       // Random seed
+        pid_t PROCESS_ID = getpid(); // Parent process ID
+
         // CPU clock
-        clock_t start, end;
-        double cpu_time_used;
-        start = clock();
+        struct timeval TSTART, TEND;
+        double TIME;
+        gettimeofday(&TSTART, NULL);
+
+        // Parameters
+        int n = atoi(argv[1]);
+        int P = atoi(argv[2]);
 
         // Matrix declaration
-        int n = atoi(argv[1]);
         int **a, **b;
 
         a = initialize(n);
@@ -34,37 +41,42 @@ int main(int argc, char *argv[])
         int **result;
         result = initialize(n);
 
-        // fork() returns 0 to the child process
-        // and the child process id to the parent process
-        pid_t pid = fork();
+        // Process creation
+        pid_t pid = getppid(); // Parent process ID
 
-        if (pid == 0)
+        for (int i = 0; i < P; i++)
         {
-            // Child process
-            printf("Child process: %d   Parent process: %d \n", getpid(), getppid());
+            int parameters[3] = {n, P, i + 1};
+            if (pid != 0) // Parent process
+            {
+                bruteForce(a, b, result, parameters);
+                pid = fork();
+                wait(NULL);
+            }
         }
-        else if (pid > 0)
-        {
-            // Parent process
-            printf("Parent process: %d   Child process: %d \n", getpid(), pid);
-        }
-        else
-        {
-            // Error
-            printf("Error creating the process!\n");
-        }
-
-        // Matrix multiplication with O(n^3) algorithm
-        //bruteForce(a, b, result, n);
 
         // End clock
-        end = clock();
-        cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
-        printf("\nTime elapsed: %f seconds\n", cpu_time_used);
+        gettimeofday(&TEND, NULL);
+        TIME = (TEND.tv_sec - TSTART.tv_sec) * 1000.0;    // sec to ms
+        TIME += (TEND.tv_usec - TSTART.tv_usec) / 1000.0; // us to ms
+
+        if (getpid() == PROCESS_ID)
+        {
+            printf("%.5lf\n", TIME / 1000.0);
+        }
+
+        // Free memory
+        for (int i = 0; i < n; i++)
+        {
+            free(a[i]);
+            free(b[i]);
+            free(result[i]);
+        }
     }
     else
     {
-        printf("You must put the matrix size as your first argument!\n");
+        printf("You lack of arguments. Please, try again.\n");
+        printf("Parameters: <matrix size> <number of processes>\n");
     }
 
     return 0;
@@ -86,19 +98,37 @@ int **initialize(int n)
 // Matrix input
 void input(int **matrix, int n)
 {
-    printf("Enter the elements of the matrix:\n");
+    // Random input
     for (int i = 0; i < n; i++)
     {
         for (int j = 0; j < n; j++)
         {
-            scanf("%d", &matrix[i][j]);
+            matrix[i][j] = 1 + rand() % 9;
         }
     }
 }
 
 // Matrix multiplication with O(n^3) algorithm
-void bruteForce(int **A, int **B, int **result, int n)
+void bruteForce(int **A, int **B, int **result, int parameters[3])
 {
+    // Parameters
+    int n = parameters[0];  // Matrix size
+    int P = parameters[1];  // Number of processes
+    int id = parameters[2]; // Process ID
+
+    // Distribute the work
+    int start, end;
+    if (id % P == 0)
+    {
+        start = (id - 1) * (n / P);
+        end = id * (n / P);
+    }
+    else
+    {
+        start = (id - 1) * (n / P);
+        end = id * (n / P) + (n % P);
+    }
+
     for (int i = 0; i < n; i++)
     {
         for (int j = 0; j < n; j++)

@@ -15,6 +15,8 @@ int main(int argc, char *argv[])
 {
     if (argc >= 2)
     {
+        srand(time(NULL)); // Random seed
+
         // CPU clock
         clock_t start, end;
         double cpu_time_used;
@@ -60,7 +62,7 @@ int main(int argc, char *argv[])
         cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
         printf("%f\n", cpu_time_used);
 
-        //Free memory
+        // Free memory
         for (int i = 0; i < n; i++)
         {
             free(a[i]);
@@ -98,8 +100,7 @@ int **initialize(int n)
 
 void input(int **matrix, int n)
 {
-    srand(time(NULL)); // Random seed
-                       // Random input
+    // Random input
     for (int i = 0; i < n; i++)
     {
         for (int j = 0; j < n; j++)
