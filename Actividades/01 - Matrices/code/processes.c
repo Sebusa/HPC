@@ -44,13 +44,14 @@ int main(int argc, char *argv[])
         // Process creation
         pid_t pid = getpid(); // Actual process ID
 
+        int parameters[3] = {n, P, 0}; // Matrix size, number of processes, process ID
         // We don't need to create a new process for the last one as we already count the parent process
         for (int i = 0; i < P-1; i++)
         {
-            int parameters[3] = {n, P, i + 1}; // Matrix size, number of processes, process ID
 
             if (pid != 0) // Parent process
             {
+                parameters[2] = i + 1;
                 bruteForce(a, b, result, parameters);
 
                 wait(NULL); // Wait for the child process to finish
