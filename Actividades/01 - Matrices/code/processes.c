@@ -4,9 +4,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/shm.h>
 #include <sys/wait.h>
 #include <sys/time.h>
 #include <time.h> // Have no idea why with sys/time.h doesn't work
+
+// Global variables (shared memory)
+#define MAX_SHARED_MEMORY_IDS 10
+int shared_memory_ids[MAX_SHARED_MEMORY_IDS];
+int next_shared_memory_id = 0;
 
 // Functions declarations
 int **initialize(int n);
@@ -39,17 +45,12 @@ int main(int argc, char *argv[])
             double TIME;
             gettimeofday(&TSTART, NULL);
 
-            // Matrix declaration
-            int **a, **b;
-
-            a = initialize(n);
-            b = initialize(n);
-
+            // Matrix declaration with shared memory and input
+            int **a = initialize(n);
+            int **b = initialize(n);
+            int **result = initialize(n);
             input(a, n);
             input(b, n);
-
-            int **result;
-            result = initialize(n);
 
             // Process creation
             pid_t pid = getpid(); // Actual process ID
@@ -97,26 +98,40 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-// Matrix initialization (memory allocation)
+//Allocate memory for matrix in shared memory and return the pointer
 int **initialize(int n)
 {
-    int **matrix;
-    matrix = (int **)malloc(n * sizeof(int *));
+    // Allocate memory for matrix
+    int **matrix = (int **)malloc(n * sizeof(int *));
     for (int i = 0; i < n; i++)
     {
         matrix[i] = (int *)malloc(n * sizeof(int));
     }
 
-    return matrix;
-}
-
-// deallocate memory for matrix
-void deallocate(int **matrix, int n)
-{
+    // Allocate memory for matrix in shared memory
+    int **shared_matrix = (int **)malloc(n * sizeof(int *));
     for (int i = 0; i < n; i++)
     {
-        free(matrix[i]);
+        int shared_memory_id = shmget(IPC_PRIVATE, n * sizeof(int), IPC_CREAT | 0666);
+        shared_memory_ids[next_shared_memory_id] = shared_memory_id;
+        next_shared_memory_id++;
+        shared_matrix[i] = (int *)shmat(shared_memory_id, NULL, 0);
     }
+
+    return shared_matrix;
+}
+
+// Deallocate memory for matrix and matrix in shared memory
+void deallocate(int **matrix, int n)
+{
+    // Deallocate memory for matrix in shared memory
+    for (int i = 0; i < n; i++)
+    {
+        shmdt(matrix[i]);
+        shmctl(shared_memory_ids[i], IPC_RMID, NULL);
+    }
+
+    // Deallocate memory for matrix
     free(matrix);
 }
 
