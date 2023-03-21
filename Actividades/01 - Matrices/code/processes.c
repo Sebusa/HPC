@@ -1,14 +1,16 @@
-// mxm matrix multiplication using processes and shared memory (fork)
+// mxm matrix multiplication using processes and shared memory
 
+// Libraries
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/time.h>
-#include <time.h> // Have no fucking idea why with sys/time.h it doesn't work
+#include <time.h> // Have no idea why with sys/time.h doesn't work
 
 // Functions declarations
 int **initialize(int n);
+void deallocate(int **matrix, int n);
 void input(int **matrix, int n);
 void bruteForce(int **A, int **B, int **result, int parameters[3]);
 
@@ -17,69 +19,73 @@ int main(int argc, char *argv[])
 {
     if (argc >= 3)
     {
-        srand(time(NULL));           // Random seed
-        pid_t PROCESS_ID = getpid(); // Parent process ID
-
-        // CPU clock
-        struct timeval TSTART, TEND;
-        double TIME;
-        gettimeofday(&TSTART, NULL);
-
         // Parameters
         int n = atoi(argv[1]);
         int P = atoi(argv[2]);
 
-        // Matrix declaration
-        int **a, **b;
-
-        a = initialize(n);
-        b = initialize(n);
-
-        input(a, n);
-        input(b, n);
-
-        int **result;
-        result = initialize(n);
-
-        // Process creation
-        pid_t pid = getpid(); // Actual process ID
-
-        int parameters[3] = {n, P, 0}; // Matrix size, number of processes, process ID
-        // We don't need to create a new process for the last one as we already count the parent process
-        for (int i = 0; i < P-1; i++)
+        if (n < 1 || P < 1)
         {
-
-            if (pid != 0) // Parent process
-            {
-                parameters[2] = i + 1;
-                bruteForce(a, b, result, parameters);
-
-                wait(NULL); // Wait for the child process to finish
-                pid = fork(); // Create a new child process
-            }
-            else if(pid == -1) // Error
-            {
-                printf("Error creating the process.\n");
-                return 1;
-            }
+            printf("Invalid parameters. Please, try again.\n");
+            printf("Parameters: <matrix size> <number of processes>\n");
+            return 1;
         }
-
-        // End clock
-        gettimeofday(&TEND, NULL);
-        TIME = (TEND.tv_sec - TSTART.tv_sec) * 1000.0;    // sec to ms
-        TIME += (TEND.tv_usec - TSTART.tv_usec) / 1000.0; // us to ms
-
-        if (getpid() == PROCESS_ID)
+        else
         {
-            printf("%.5lf\n", TIME / 1000.0);
-        }
+            srand(time(NULL));           // Random seed
+            pid_t PROCESS_ID = getpid(); // Parent process ID
 
-        // Free memory
-        for (int i = 0; i < n; i++)
-        {
-            free(a[i]);
-            free(b[i]);
-            free(result[i]);
+            // CPU clock
+            struct timeval TSTART, TEND;
+            double TIME;
+            gettimeofday(&TSTART, NULL);
+
+            // Matrix declaration
+            int **a, **b;
+
+            a = initialize(n);
+            b = initialize(n);
+
+            input(a, n);
+            input(b, n);
+
+            int **result;
+            result = initialize(n);
+
+            // Process creation
+            pid_t pid = getpid(); // Actual process ID
+
+            int parameters[3] = {n, P, 0}; // Matrix size, number of processes, process ID
+            // We don't need to create a new process for the last one as we already count the parent process
+            for (int i = 0; i < P - 1; i++)
+            {
+                if (pid != 0) // Parent process
+                {
+                    parameters[2] = i + 1;
+                    bruteForce(a, b, result, parameters);
+                    pid = fork(); // Create a new child process
+                }
+                else if (pid == -1) // Error
+                {
+                    printf("Error creating the process.\n");
+                    return 1;
+                }
+            }
+            wait(NULL);   // Wait for the child process to finish
+
+            // End clock
+            gettimeofday(&TEND, NULL);
+            TIME = (TEND.tv_sec - TSTART.tv_sec) * 1000.0;    // sec to ms
+            TIME += (TEND.tv_usec - TSTART.tv_usec) / 1000.0; // us to ms
+
+            if (getpid() == PROCESS_ID)
+            {
+                printf("%.5lf\n", TIME / 1000.0);
+            }
+
+            // Free memory
+            deallocate(a, n);
+            deallocate(b, n);
+            deallocate(result, n);
         }
     }
     else
@@ -91,7 +97,7 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-// Matrix initialization
+// Matrix initialization (memory allocation)
 int **initialize(int n)
 {
     int **matrix;
@@ -104,7 +110,17 @@ int **initialize(int n)
     return matrix;
 }
 
-// Matrix input
+// deallocate memory for matrix
+void deallocate(int **matrix, int n)
+{
+    for (int i = 0; i < n; i++)
+    {
+        free(matrix[i]);
+    }
+    free(matrix);
+}
+
+// Matrix input (random)
 void input(int **matrix, int n)
 {
     // Random input
@@ -127,10 +143,6 @@ void bruteForce(int **A, int **B, int **result, int parameters[3])
 
     // Distribute the work
     int start, end;
-    if (P == 0) // Avoid division by zero
-    {
-        P = 1;
-    }
 
     if (id % P == 0)
     {
@@ -144,7 +156,7 @@ void bruteForce(int **A, int **B, int **result, int parameters[3])
     }
 
     // Matrix multiplication
-    for (int i = 0; i < n; i++)
+    for (int i = start; i < end; i++)
     {
         for (int j = 0; j < n; j++)
         {
