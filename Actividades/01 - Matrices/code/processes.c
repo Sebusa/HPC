@@ -1,112 +1,193 @@
-// mxm matrix multiplication using processes and shared memory (fork)
+// Matrix multiplication using processes and shared memory
 
+// Libraries
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <unistd.h>
-#include <sys/types.h> // pid_t
+#include <sys/shm.h>
+#include <sys/wait.h>
+#include <sys/time.h>
+#include <time.h>
 
 // Functions declarations
-int **initialize(int n);
-void input(int **matrix, int n);
-void bruteForce(int **A, int **B, int **result, int n);
+int **create_shm(int size, key_t key);
+void deallocate_shm(int **matrix);
+void matrix_input();
+void brute_force(int **a, int **b, int **result, int parameters[3]);
 
 // CMD arguments
 int main(int argc, char *argv[])
 {
-    if (argc >= 2)
+    if (argc >= 3)
     {
-        // CPU clock
-        clock_t start, end;
-        double cpu_time_used;
-        start = clock();
-
-        // Matrix declaration
+        // Parameters
         int n = atoi(argv[1]);
-        int **a, **b;
+        int P = atoi(argv[2]);
 
-        a = initialize(n);
-        b = initialize(n);
-
-        input(a, n);
-        input(b, n);
-
-        int **result;
-        result = initialize(n);
-
-        // fork() returns 0 to the child process
-        // and the child process id to the parent process
-        pid_t pid = fork();
-
-        if (pid == 0)
+        if (n < 1 || P < 1)
         {
-            // Child process
-            printf("Child process: %d   Parent process: %d \n", getpid(), getppid());
-        }
-        else if (pid > 0)
-        {
-            // Parent process
-            printf("Parent process: %d   Child process: %d \n", getpid(), pid);
+            printf("Invalid parameters. Please, try again.\n");
+            printf("Parameters: <matrix size> <number of processes>");
+            return 1;
         }
         else
         {
-            // Error
-            printf("Error creating the process!\n");
+            srand(time(NULL));           // Random seed
+            pid_t PROCESS_ID = getpid(); // Parent process ID
+
+            // CPU clock
+            struct timeval TSTART, TEND;
+            double TIME;
+            gettimeofday(&TSTART, NULL);
+
+            // Matrix declaration
+            int **a, **b, **result;
+
+            // Keys
+            key_t A_SHM_KEY = 0x1234;
+            key_t B_SHM_KEY = 0x5678;
+            key_t RESULT_SHM_KEY = 0x9ABC;
+
+            // Shared memory initialization
+            a = create_shm(n, A_SHM_KEY);
+            b = create_shm(n, B_SHM_KEY);
+            result = create_shm(n, RESULT_SHM_KEY);
+
+            // Matrix input
+            matrix_input(a, n);
+            matrix_input(b, n);
+
+            // Process creation
+            pid_t pid = getpid(); // Actual process ID
+
+            int parameters[3] = {n, P, 0}; // Matrix size, number of processes, process ID
+            // We don't need to create a new process for the last one as we already count the parent process
+            for (int i = 0; i < P - 1; i++)
+            {
+                if (pid != 0) // Parent process
+                {
+                    parameters[2] = i + 1;
+                    brute_force(a, b, result, parameters);
+                    pid = fork(); // Create a new child process
+                }
+                else if (pid == -1) // Error
+                {
+                    printf("Error creating the process.\n");
+                    return 1;
+                }
+            }
+            wait(NULL); // Wait for the child process to finish
+
+            // End clock
+            gettimeofday(&TEND, NULL);
+            TIME = (TEND.tv_sec - TSTART.tv_sec) * 1000.0;    // sec to ms
+            TIME += (TEND.tv_usec - TSTART.tv_usec) / 1000.0; // us to ms
+
+            if (getpid() == PROCESS_ID)
+            {
+                printf("%.5lf\n", TIME / 1000.0);
+            }
+
+            // Deallocate memory
+            deallocate_shm(a);
+            deallocate_shm(b);
+            deallocate_shm(result);
         }
-
-        // Matrix multiplication with O(n^3) algorithm
-        //bruteForce(a, b, result, n);
-
-        // End clock
-        end = clock();
-        cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
-        printf("\nTime elapsed: %f seconds\n", cpu_time_used);
     }
     else
     {
-        printf("You must put the matrix size as your first argument!\n");
+        printf("You lack of arguments. Please, try again.\n");
+        printf("Parameters: <matrix size> <number of processes>\n");
     }
-
     return 0;
 }
 
-// Matrix initialization
-int **initialize(int n)
+// Shared memory initialization
+int **create_shm(int size, key_t key)
 {
-    int **matrix;
-    matrix = (int **)malloc(n * sizeof(int *));
-    for (int i = 0; i < n; i++)
+    // Allocate shared memory
+    int shmid = shmget(key, size * sizeof(int *), IPC_CREAT | 0666);
+    if (shmid < 0)
     {
-        matrix[i] = (int *)malloc(n * sizeof(int));
+        perror("shmget");
+        printf("You lack of arguments. Please, try again.\n");
+        printf("Parameters: <matrix size> <number of processes>\n");
+        exit(1);
+    }
+
+    // Attach the shared memory
+    int **matrix = (int **)shmat(shmid, NULL, 0);
+    if (matrix == NULL)
+    {
+        perror("shmat");
+        exit(1);
+    }
+
+    // Allocate memory for each row
+    for (int i = 0; i < size; i++)
+    {
+        matrix[i] = (int *)malloc(size * sizeof(int));
+
+        if (matrix[i] == NULL)
+        {
+            perror("malloc");
+            exit(1);
+        }
     }
 
     return matrix;
 }
 
-// Matrix input
-void input(int **matrix, int n)
+// Deallocate memory
+void deallocate_shm(int **matrix)
 {
-    printf("Enter the elements of the matrix:\n");
-    for (int i = 0; i < n; i++)
+    for(int i = 0; i < sizeof(matrix); i++)
     {
-        for (int j = 0; j < n; j++)
+        free(matrix[i]);
+    }
+    shmdt(matrix);
+}
+
+// Matrix input (random)
+void matrix_input(int **matrix, int size)
+{
+    for (int i = 0; i < size; i++)
+    {
+        for (int j = 0; j < size; j++)
         {
-            scanf("%d", &matrix[i][j]);
+            matrix[i][j] = 1 + rand() % 9;
         }
     }
 }
 
 // Matrix multiplication with O(n^3) algorithm
-void bruteForce(int **A, int **B, int **result, int n)
+void brute_force(int **a, int **b, int **result, int parameters[3])
 {
-    for (int i = 0; i < n; i++)
+    int n = parameters[0];
+    int T = parameters[1];
+    int ID = parameters[2];
+
+    // Distribute the work
+    int start, end;
+    if (ID % T == 0)
+    {
+        start = (ID - 1) * (n / T);
+        end = ID * (n / T);
+    }
+    else
+    {
+        start = (ID - 1) * (n / T);
+        end = ID * (n / T) + (n % T);
+    }
+
+    // Matrix multiplication
+    for (int i = start; i < end; i++)
     {
         for (int j = 0; j < n; j++)
         {
-            result[i][j] = 0;
             for (int k = 0; k < n; k++)
             {
-                result[i][j] += A[i][k] * B[k][j];
+                result[i][j] += a[i][k] * b[k][j];
             }
         }
     }

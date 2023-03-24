@@ -7,6 +7,7 @@
 // Functions declarations
 int **initialize(int n);
 void input(int **matrix, int n);
+int **transpose(int **matrix, int n);
 void *bruteForce(void *threadarg);
 
 // Global variables
@@ -39,6 +40,8 @@ int main(int argc, char *argv[])
         result = initialize(n);
         input(A, n);
         input(B, n);
+
+        B = transpose(B, n);
 
         // Threads creation
         for (int i = 0; i < T; i++)
@@ -93,7 +96,7 @@ void *bruteForce(void *threadarg)
             result[i][j] = 0;
             for (int k = 0; k < n; k++)
             {
-                result[i][j] += A[i][k] * B[k][j];
+                result[i][j] += A[i][k] * B[i][k];
             }
         }
     }
@@ -121,4 +124,17 @@ void input(int **matrix, int n)
             matrix[i][j] = 1 + rand() % 9;
         }
     }
+}
+
+int **transpose(int **matrix, int n)
+{
+    int **transposed = initialize(n);
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            transposed[i][j] = matrix[j][i];
+        }
+    }
+    return transposed;
 }
