@@ -1,18 +1,19 @@
-// mxm matrix multiplication using processes and shared memory
+// Matrix multiplication using processes and shared memory
 
 // Libraries
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/shm.h>
 #include <sys/wait.h>
 #include <sys/time.h>
-#include <time.h> // Have no idea why with sys/time.h doesn't work
+#include <time.h>
 
 // Functions declarations
-int **initialize(int n);
-void deallocate(int **matrix, int n);
-void input(int **matrix, int n);
-void bruteForce(int **A, int **B, int **result, int parameters[3]);
+int **create_shm(int size, key_t key);
+void deallocate_shm(int **matrix);
+void matrix_input();
+void brute_force(int **a, int **b, int **result, int parameters[3]);
 
 // CMD arguments
 int main(int argc, char *argv[])
@@ -26,7 +27,7 @@ int main(int argc, char *argv[])
         if (n < 1 || P < 1)
         {
             printf("Invalid parameters. Please, try again.\n");
-            printf("Parameters: <matrix size> <number of processes>\n");
+            printf("Parameters: <matrix size> <number of processes>");
             return 1;
         }
         else
@@ -40,16 +41,21 @@ int main(int argc, char *argv[])
             gettimeofday(&TSTART, NULL);
 
             // Matrix declaration
-            int **a, **b;
+            int **a, **b, **result;
 
-            a = initialize(n);
-            b = initialize(n);
+            // Keys
+            key_t A_SHM_KEY = 0x1234;
+            key_t B_SHM_KEY = 0x5678;
+            key_t RESULT_SHM_KEY = 0x9ABC;
 
-            input(a, n);
-            input(b, n);
+            // Shared memory initialization
+            a = create_shm(n, A_SHM_KEY);
+            b = create_shm(n, B_SHM_KEY);
+            result = create_shm(n, RESULT_SHM_KEY);
 
-            int **result;
-            result = initialize(n);
+            // Matrix input
+            matrix_input(a, n);
+            matrix_input(b, n);
 
             // Process creation
             pid_t pid = getpid(); // Actual process ID
@@ -61,7 +67,7 @@ int main(int argc, char *argv[])
                 if (pid != 0) // Parent process
                 {
                     parameters[2] = i + 1;
-                    bruteForce(a, b, result, parameters);
+                    brute_force(a, b, result, parameters);
                     pid = fork(); // Create a new child process
                 }
                 else if (pid == -1) // Error
@@ -70,7 +76,7 @@ int main(int argc, char *argv[])
                     return 1;
                 }
             }
-            wait(NULL);   // Wait for the child process to finish
+            wait(NULL); // Wait for the child process to finish
 
             // End clock
             gettimeofday(&TEND, NULL);
@@ -82,10 +88,10 @@ int main(int argc, char *argv[])
                 printf("%.5lf\n", TIME / 1000.0);
             }
 
-            // Free memory
-            deallocate(a, n);
-            deallocate(b, n);
-            deallocate(result, n);
+            // Deallocate memory
+            deallocate_shm(a);
+            deallocate_shm(b);
+            deallocate_shm(result);
         }
     }
     else
@@ -93,40 +99,61 @@ int main(int argc, char *argv[])
         printf("You lack of arguments. Please, try again.\n");
         printf("Parameters: <matrix size> <number of processes>\n");
     }
-
     return 0;
 }
 
-// Matrix initialization (memory allocation)
-int **initialize(int n)
+// Shared memory initialization
+int **create_shm(int size, key_t key)
 {
-    int **matrix;
-    matrix = (int **)malloc(n * sizeof(int *));
-    for (int i = 0; i < n; i++)
+    // Allocate shared memory
+    int shmid = shmget(key, size * sizeof(int *), IPC_CREAT | 0666);
+    if (shmid < 0)
     {
-        matrix[i] = (int *)malloc(n * sizeof(int));
+        perror("shmget");
+        printf("You lack of arguments. Please, try again.\n");
+        printf("Parameters: <matrix size> <number of processes>\n");
+        exit(1);
+    }
+
+    // Attach the shared memory
+    int **matrix = (int **)shmat(shmid, NULL, 0);
+    if (matrix == NULL)
+    {
+        perror("shmat");
+        exit(1);
+    }
+
+    // Allocate memory for each row
+    for (int i = 0; i < size; i++)
+    {
+        matrix[i] = (int *)malloc(size * sizeof(int));
+
+        if (matrix[i] == NULL)
+        {
+            perror("malloc");
+            exit(1);
+        }
     }
 
     return matrix;
 }
 
-// deallocate memory for matrix
-void deallocate(int **matrix, int n)
+// Deallocate memory
+void deallocate_shm(int **matrix)
 {
-    for (int i = 0; i < n; i++)
+    for(int i = 0; i < sizeof(matrix); i++)
     {
         free(matrix[i]);
     }
-    free(matrix);
+    shmdt(matrix);
 }
 
 // Matrix input (random)
-void input(int **matrix, int n)
+void matrix_input(int **matrix, int size)
 {
-    // Random input
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < size; i++)
     {
-        for (int j = 0; j < n; j++)
+        for (int j = 0; j < size; j++)
         {
             matrix[i][j] = 1 + rand() % 9;
         }
@@ -134,25 +161,23 @@ void input(int **matrix, int n)
 }
 
 // Matrix multiplication with O(n^3) algorithm
-void bruteForce(int **A, int **B, int **result, int parameters[3])
+void brute_force(int **a, int **b, int **result, int parameters[3])
 {
-    // Parameters
-    int n = parameters[0];  // Matrix size
-    int P = parameters[1];  // Number of processes
-    int id = parameters[2]; // Process ID
+    int n = parameters[0];
+    int T = parameters[1];
+    int ID = parameters[2];
 
     // Distribute the work
     int start, end;
-
-    if (id % P == 0)
+    if (ID % T == 0)
     {
-        start = (id - 1) * (n / P);
-        end = id * (n / P);
+        start = (ID - 1) * (n / T);
+        end = ID * (n / T);
     }
     else
     {
-        start = (id - 1) * (n / P);
-        end = id * (n / P) + (n % P);
+        start = (ID - 1) * (n / T);
+        end = ID * (n / T) + (n % T);
     }
 
     // Matrix multiplication
@@ -160,10 +185,9 @@ void bruteForce(int **A, int **B, int **result, int parameters[3])
     {
         for (int j = 0; j < n; j++)
         {
-            result[i][j] = 0;
             for (int k = 0; k < n; k++)
             {
-                result[i][j] += A[i][k] * B[k][j];
+                result[i][j] += a[i][k] * b[k][j];
             }
         }
     }
