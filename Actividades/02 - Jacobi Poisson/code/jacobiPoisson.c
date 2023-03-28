@@ -1,7 +1,8 @@
+// Jacobi iteration for the Poisson equation in 1D
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "timing.h"
+#include <time.h>
 
 /* Function to perform nsweeps sweeps of Jacobi iteration on a 1D Poisson problem */
 void jacobi(int nsweeps, int n, double *u, double *f)
@@ -51,12 +52,11 @@ void write_solution(int n, double *u, const char *fname)
 int main(int argc, char **argv)
 {
     /* Declare variables */
-    int i;
-    int n, nsteps;
-    double *u, *f;
-    double h;
-    timing_t tstart, tend;
-    char *fname;
+    int n, nsteps;        // grid size and number of steps
+    double *u, *f;        // solution and RHS
+    double h;             // step size
+    char *fname;          // file name
+    clock_t tstart, tend; // timers
 
     /* Process command line arguments */
     n = (argc > 1) ? atoi(argv[1]) : 100;
@@ -70,19 +70,21 @@ int main(int argc, char **argv)
 
     /* Initialize arrays */
     memset(u, 0, (n + 1) * sizeof(double));
-    for (i = 0; i <= n; ++i)
+    for (int i = 0; i <= n; ++i)
         f[i] = i * h;
 
     /* Perform Jacobi iteration */
-    get_time(&tstart);
+    tstart = clock();
     jacobi(nsteps, n, u, f);
-    get_time(&tend);
+    tend = clock();
+
+    double cpu_time_used = ((double)(tend - tstart)) / CLOCKS_PER_SEC;
 
     /* Print results */
     printf("n: %d\n"
-            "nsteps: %d\n"
-            "Elapsed time: %g s\n",
-            n, nsteps, timespec_diff(tstart, tend));
+           "nsteps: %d\n"
+           "Elapsed time: %f s\n",
+           n, nsteps, cpu_time_used);
 
     /* Write solution to file */
     if (fname)
