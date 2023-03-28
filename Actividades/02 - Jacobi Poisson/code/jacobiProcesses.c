@@ -29,6 +29,7 @@ int *create_shm(int size, key_t key, int shmid)
     return array;
 }
 
+/* Deallocate and 'destroy' the shared memory segment */
 void destroy_shm(double *segment, int shmid)
 {
     shmdt(segment);
@@ -36,7 +37,7 @@ void destroy_shm(double *segment, int shmid)
 }
 
 /* Function to perform nsweeps sweeps of Jacobi iteration on a 1D Poisson problem */
-void jacobi(int nsweeps, int n, double *u, double *f)
+void jacobi(int nsweeps, int n, double *u, double *f, int pid, int P)
 {
     /* Declare variables */
     int i, sweep;
@@ -83,7 +84,7 @@ void write_solution(int n, double *u, const char *fname)
 int main(int argc, char **argv)
 {
     /* Declare variables */
-    int n, nsteps;        // grid size and number of steps
+    int n, nsteps, P;        // grid size, number of steps and number of Procesess
     double h;             // step size
     char *fname;          // file name
     pid_t PROCESS_ID = getpid(); //Main process ID
@@ -101,7 +102,8 @@ int main(int argc, char **argv)
     /* Process command line arguments */
     n = (argc > 1) ? atoi(argv[1]) : 100;
     nsteps = (argc > 2) ? atoi(argv[2]) : 100;
-    fname = (argc > 3) ? argv[3] : NULL;
+    P = (argc > 3) ? atoi(argv[3]) : 1;
+    fname = (argc > 4) ? argv[4] : NULL;
     h = 1.0 / n;
 
     /* Allocate memory for arrays */
@@ -115,26 +117,43 @@ int main(int argc, char **argv)
 
     /* Perform Jacobi iteration */
     gettimeofday(&tstart, NULL);
-    jacobi(nsteps, n, u, f);
-    gettimeofday(&tend, NULL);
+    pid_t pid = getpid(); // Actual process
+
+    for(int i = 1; i < P; i++)
+    {
+        if (pid != 0)
+        {
+            jacobi(nsteps, n, u, f, i, P);
+            pid = fork(); // New child
+        }
+        else if (pid == -1)
+        {
+            perror("pid");
+            return 1;
+        } 
+    }
+    wait(NULL); // Wait for the child process
 
     gettimeofday(&tend, NULL);
     TIME = (tend.tv_sec - tstart.tv_sec) * 1000.0;    // sec to ms
     TIME += (tend.tv_usec - tstart.tv_usec) / 1000.0; // us to ms
 
-    /* Print results */
-    printf("n: %d\n"
-           "nsteps: %d\n"
-           "Elapsed time: %5lf s\n",
-           n, nsteps, TIME/1000.0);
+    if (getpid() == PROCESS_ID)
+    {
+        /* Print results */
+        printf("n: %d\n"
+               "nsteps: %d\n"
+               "Elapsed time: %5lf s\n",
+               n, nsteps, TIME/1000.0);
 
-    /* Write solution to file */
-    if (fname)
-        write_solution(n, u, fname);
+        /* Write solution to file */
+        if (fname)
+            write_solution(n, u, fname);
 
-    /* Deattach the shared memory segment */
-    destroy_shm(u, shmid_u);
-    destroy_shm(f, shmid_f);
+        /* Deattach the shared memory segment */
+        destroy_shm(u, shmid_u);
+        destroy_shm(f, shmid_f);
+    }
 
     return 0;
 }
