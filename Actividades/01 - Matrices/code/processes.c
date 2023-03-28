@@ -12,7 +12,7 @@
 // Functions declarations
 int **create_shm(int size, key_t key);
 void deallocate_shm(int **matrix);
-void matrix_input();
+void matrix_input(int **matrix, int size);
 void brute_force(int **a, int **b, int **result, int parameters[3]);
 
 // CMD arguments

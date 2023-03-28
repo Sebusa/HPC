@@ -23,17 +23,18 @@ echo "done!"
 '
 
 #cache memory line optimization
-echo "Optimized by memory test in progress..."
+: 'echo "Optimized by memory test in progress..."
 for size in 500 1000 1500 2000 2500 3000 3500 4000 5000; do
     echo "------------------" $size >>results/'Memory.csv'
     for i in {1..10}; do
-        run/./optimize $size >>results/'Memory.csv'
+        run/./memory $size >>results/'Memory.csv'
     done
 done
 echo "done!"
+'
 
 #optimized by compiler
-echo "Optimized by compiler test in progress..."
+: 'echo "Optimized by compiler test in progress..."
 for size in 500 1000 1500 2000 2500 3000 3500 4000 5000; do
     echo "------------------" $size >>results/'Compiler.csv'
     for i in {1..10}; do
@@ -41,6 +42,7 @@ for size in 500 1000 1500 2000 2500 3000 3500 4000 5000; do
     done
 done
 echo "done!"
+'
 
 #Optimized by processes (?)
 echo "Optimized by processes test in progress..."
@@ -52,3 +54,4 @@ for size in 500 1000 1500 2000 2500 3000 3500 4000 5000; do
         done
     done
 done
+echo "Finished!"
