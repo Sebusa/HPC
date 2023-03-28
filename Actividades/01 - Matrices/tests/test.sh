@@ -1,5 +1,5 @@
 #serial processing
-: 'echo "Serial test in progress..."
+echo "Serial test in progress..."
 for size in 500 1000 1500 2000 2500 3000 3500 4000 5000; do
     echo "------------------" $size >>results/'Serial.csv'
     for i in {1..10}; do
@@ -7,10 +7,10 @@ for size in 500 1000 1500 2000 2500 3000 3500 4000 5000; do
     done
 done
 echo "done!"
-'
+
 
 #parallel processing
-: 'echo "Parallel test in progress..."
+echo "Parallel test in progress..."
 for size in 500 1000 1500 2000 2500 3000 3500 4000 5000; do
     for threads in 2 4 8; do
         echo "------------------" $size $threads >>results/'Threads.csv'
@@ -20,21 +20,19 @@ for size in 500 1000 1500 2000 2500 3000 3500 4000 5000; do
     done
 done
 echo "done!"
-'
 
 #cache memory line optimization
-: 'echo "Optimized by memory test in progress..."
+echo "Optimized by memory test in progress..."
 for size in 500 1000 1500 2000 2500 3000 3500 4000 5000; do
     echo "------------------" $size >>results/'Memory.csv'
     for i in {1..10}; do
-        run/./memory $size >>results/'Memory.csv'
+        run/./memoryLines $size >>results/'Memory.csv'
     done
 done
 echo "done!"
-'
 
 #optimized by compiler
-: 'echo "Optimized by compiler test in progress..."
+echo "Optimized by compiler test in progress..."
 for size in 500 1000 1500 2000 2500 3000 3500 4000 5000; do
     echo "------------------" $size >>results/'Compiler.csv'
     for i in {1..10}; do
@@ -42,7 +40,6 @@ for size in 500 1000 1500 2000 2500 3000 3500 4000 5000; do
     done
 done
 echo "done!"
-'
 
 #Optimized by processes (?)
 echo "Optimized by processes test in progress..."

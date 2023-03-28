@@ -1,4 +1,4 @@
-// mxm matrix multiplication with memory optimization
+// mxm matrix multiplication with memory line optimization
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>

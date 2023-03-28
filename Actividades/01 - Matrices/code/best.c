@@ -1,4 +1,7 @@
-// matrix multiplication with threads
+/*
+This is a combination of threads, memory lines and -O3 parameter optimization.
+It is only for experimentation purposes.
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
