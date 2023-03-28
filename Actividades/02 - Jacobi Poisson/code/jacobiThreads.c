@@ -24,9 +24,9 @@ void *jacobi(void *threadarg)
     utmp[0] = u[0];
     utmp[n] = u[n];
 
-    // Distribution
+    /* Distribution */
     int start = (ID - 1) * (nsteps / T);
-    int end = (ID%T == 0)? ID*(nsteps/T) : ID*(nsteps/T)+(nsteps%T);
+    int end = (ID % T == 0) ? ID * (nsteps / T) : ID * (nsteps / T) + (nsteps % T);
 
     /* Perform Jacobi iteration */
     for (int sweep = start; sweep < end; sweep += 2)

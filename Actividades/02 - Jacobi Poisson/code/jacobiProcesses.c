@@ -8,7 +8,7 @@
 #include <sys/time.h>
 
 /* Create a shared memory segment */
-int *create_shm(int size, key_t key, int shmid)
+double *create_shm(int size, key_t key, int shmid)
 {
     // Create the segment
     shmid = shmget(key, size * sizeof(double), IPC_CREAT | 0666);
@@ -19,7 +19,7 @@ int *create_shm(int size, key_t key, int shmid)
     }
 
     // Attach the segment
-    int *array = (double *)shmat(shmid, NULL, 0);
+    double *array = (double *)shmat(shmid, NULL, 0);
     if (array ==  NULL)
     {
         perror("shmat");
@@ -40,7 +40,6 @@ void destroy_shm(double *segment, int shmid)
 void jacobi(int nsweeps, int n, double *u, double *f, int pid, int P)
 {
     /* Declare variables */
-    int i, sweep;
     double h = 1.0 / n;
     double h2 = h * h;
     double *utmp = (double *)malloc((n + 1) * sizeof(double));
@@ -49,15 +48,19 @@ void jacobi(int nsweeps, int n, double *u, double *f, int pid, int P)
     utmp[0] = u[0];
     utmp[n] = u[n];
 
+    /* Distribution */
+    int start = (pid - 1) * (nsweeps / P);
+    int end = (pid % P == 0) ? pid * (nsweeps / P) : pid * (nsweeps / P) + (nsweeps % P);
+
     /* Perform Jacobi iteration */
-    for (sweep = 0; sweep < nsweeps; sweep += 2)
+    for (int sweep = start; sweep < end; sweep += 2)
     {
         /* Old data in u; new data in utmp */
-        for (i = 1; i < n; ++i)
+        for (int i = 1; i < n; ++i)
             utmp[i] = (u[i - 1] + u[i + 1] + h2 * f[i]) / 2;
 
         /* Old data in utmp; new data in u */
-        for (i = 1; i < n; ++i)
+        for (int i = 1; i < n; ++i)
             u[i] = (utmp[i - 1] + utmp[i + 1] + h2 * f[i]) / 2;
     }
 
