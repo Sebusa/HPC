@@ -81,10 +81,7 @@ int main(int argc, char **argv)
     double cpu_time_used = ((double)(tend - tstart)) / CLOCKS_PER_SEC;
 
     /* Print results */
-    printf("n: %d\n"
-           "nsteps: %d\n"
-           "Elapsed time: %f s\n",
-           n, nsteps, cpu_time_used);
+    printf("%f\n", cpu_time_used);
 
     /* Write solution to file */
     if (fname)

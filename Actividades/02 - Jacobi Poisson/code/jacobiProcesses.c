@@ -144,10 +144,7 @@ int main(int argc, char **argv)
     if (getpid() == PROCESS_ID)
     {
         /* Print results */
-        printf("n: %d\n"
-               "nsteps: %d\n"
-               "Elapsed time: %5lf s\n",
-               n, nsteps, TIME/1000.0);
+        printf("%5lf\n", TIME/1000.0);
 
         /* Write solution to file */
         if (fname)
