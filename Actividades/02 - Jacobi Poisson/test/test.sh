@@ -10,7 +10,7 @@ mesh_size=(100000 500000 1000000 2000000 5000000 10000000)
 sweeps=(100 500 1000 2000 5000 10000)
 
 #serial processing
-echo "Serial test in progress..."
+: 'echo "Serial test in progress..."
 for size in ${mesh_size[@]}; do
     for iteration in ${sweeps[@]}; do
         echo "------------------" $size $iteration >> results/'Serial.out'
@@ -20,7 +20,7 @@ for size in ${mesh_size[@]}; do
     done
 done
 echo "done!"
-
+'
 #parallel processing
 echo "Parallel test in progress..."
 for size in ${mesh_size[@]}; do
@@ -54,7 +54,7 @@ for size in ${mesh_size[@]}; do
         for process in 2 4 8; do
             echo "------------------" $size $iteration $process>> results/'Processes.out'
             for i in {1..10}; do
-                run/./jacobiProcesses $size $iteration $thread >> results/'Processes.out'
+                run/./jacobiProcesses $size $iteration $process >> results/'Processes.out'
             done
         done
     done

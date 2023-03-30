@@ -96,6 +96,14 @@ int main(int argc, char **argv)
         *ID = i;
         pthread_create(&threads[i], NULL, jacobi, (void *)ID);
     }
+    //join threads
+    for (int i = 0; i < T; i ++)
+    {
+        pthread_join(threads[i], NULL);
+    }
+    // Free memory
+    free(threads);
+    
     tend = clock();
 
     double cpu_time_used = ((double)(tend - tstart)) / CLOCKS_PER_SEC;
