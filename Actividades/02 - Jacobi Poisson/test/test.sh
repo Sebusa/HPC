@@ -26,7 +26,7 @@ echo "Parallel test in progress..."
 for size in ${mesh_size[@]}; do
     for iteration in ${sweeps[@]}; do
         for thread in 2 4 8; do
-            echo "------------------" $size $iteration $thread>> results/'Threads.out'
+            echo "------------------" $size $iteration $thread >> results/'Threads.out'
             for i in {1..10}; do
                 run/./jacobiThreads $size $iteration $thread >> results/'Threads.out'
             done
@@ -52,7 +52,7 @@ echo "Optimized by processes test in progress..."
 for size in ${mesh_size[@]}; do
     for iteration in ${sweeps[@]}; do
         for process in 2 4 8; do
-            echo "------------------" $size $iteration $process>> results/'Processes.out'
+            echo "------------------" $size $iteration $process >> results/'Processes.out'
             for i in {1..10}; do
                 run/./jacobiProcesses $size $iteration $process >> results/'Processes.out'
             done

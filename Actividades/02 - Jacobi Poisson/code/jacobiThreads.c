@@ -6,8 +6,8 @@
 #include <pthread.h>
 
 /* Global declarations */
-int n, nsteps, T;     // grid size, number of steps and number of threads
-double *u, *f;        // solution and RHS
+int n, nsteps, T; // grid size, number of steps and number of threads
+double *u, *f;    // solution and RHS
 
 /* Function to perform nsweeps sweeps of Jacobi iteration on a 1D Poisson problem */
 void *jacobi(void *threadarg)
@@ -42,6 +42,7 @@ void *jacobi(void *threadarg)
 
     /* Free memory allocated to utmp */
     free(utmp);
+    pthread_exit(NULL);
 }
 
 /* Function to write the solution to a file */
@@ -90,33 +91,33 @@ int main(int argc, char **argv)
     /* Perform Jacobi iteration with threads*/
     tstart = clock();
 
-    for(int i = 1; i <= T; i++)
+    for (int i = 1; i <= T; i++)
     {
         int *ID = (int *)malloc(sizeof(int));
         *ID = i;
         pthread_create(&threads[i], NULL, jacobi, (void *)ID);
     }
-    //join threads
-    for (int i = 0; i < T; i ++)
+
+    // Join threads
+    for (int i = 0; i < T; i++)
     {
         pthread_join(threads[i], NULL);
     }
-    // Free memory
-    free(threads);
-    
-    tend = clock();
 
+    tend = clock();
     double cpu_time_used = ((double)(tend - tstart)) / CLOCKS_PER_SEC;
 
     /* Print results */
-    printf("%f\n",cpu_time_used);
+    printf("%f\n", cpu_time_used);
 
     /* Write solution to file */
     if (fname)
         write_solution(n, u, fname);
 
     /* Free memory allocated for arrays */
+    free(threads);
     free(f);
     free(u);
+    
     return 0;
 }
