@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
+#include <sys/time.h>
 #include <pthread.h>
 
 /* Global declarations */
@@ -64,9 +64,12 @@ void write_solution(int n, double *u, const char *fname)
 int main(int argc, char **argv)
 {
     /* Declare variables */
-    double h;             // step size
-    char *fname;          // file name
-    clock_t tstart, tend; // timers
+    double h;    // step size
+    char *fname; // file name
+
+    // CPU clock
+    struct timeval TSTART, TEND;
+    double TIME;
 
     /* Process command line arguments */
     n = (argc > 1) ? atoi(argv[1]) : 100;
@@ -89,12 +92,12 @@ int main(int argc, char **argv)
     threads = (pthread_t *)malloc(T * sizeof(pthread_t));
 
     /* Perform Jacobi iteration with threads*/
-    tstart = clock();
+    gettimeofday(&TSTART, NULL);
 
-    for (int i = 1; i <= T; i++)
+    for (int i = 0; i < T; i++)
     {
         int *ID = (int *)malloc(sizeof(int));
-        *ID = i;
+        *ID = i+1;
         pthread_create(&threads[i], NULL, jacobi, (void *)ID);
     }
 
@@ -104,11 +107,12 @@ int main(int argc, char **argv)
         pthread_join(threads[i], NULL);
     }
 
-    tend = clock();
-    double cpu_time_used = ((double)(tend - tstart)) / CLOCKS_PER_SEC;
+    gettimeofday(&TEND, NULL);
+    TIME = (TEND.tv_sec - TSTART.tv_sec) * 1000.0;    // sec to ms
+    TIME += (TEND.tv_usec - TSTART.tv_usec) / 1000.0; // us to ms
 
     /* Print results */
-    printf("%f\n", cpu_time_used);
+    printf("%.5lf\n", TIME / 1000.0);
 
     /* Write solution to file */
     if (fname)
@@ -118,6 +122,6 @@ int main(int argc, char **argv)
     free(threads);
     free(f);
     free(u);
-    
+
     return 0;
 }
