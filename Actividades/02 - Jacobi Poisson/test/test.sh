@@ -22,7 +22,7 @@ done
 echo "done!"
 '
 #parallel processing
-: 'echo "Parallel test in progress..."
+echo "Parallel test in progress..."
 for size in ${mesh_size[@]}; do
     for iteration in ${sweeps[@]}; do
         for thread in 2 4 8; do
@@ -34,9 +34,9 @@ for size in ${mesh_size[@]}; do
     done
 done
 echo "done!"
-'
+
 #optimized by compiler
-echo "Optimized by compiler test in progress..."
+: 'echo "Optimized by compiler test in progress..."
 for size in ${mesh_size[@]}; do
     for iteration in ${sweeps[@]}; do
         echo "------------------" $size $iteration >> results/'Optimized.out'
@@ -46,9 +46,9 @@ for size in ${mesh_size[@]}; do
     done
 done
 echo "done!"
-
+'
 #Optimized by processes (?)
-echo "Optimized by processes test in progress..."
+: 'echo "Optimized by processes test in progress..."
 for size in ${mesh_size[@]}; do
     for iteration in ${sweeps[@]}; do
         for process in 2 4 8; do
@@ -60,3 +60,4 @@ for size in ${mesh_size[@]}; do
     done
 done
 echo "Finished!"
+'
