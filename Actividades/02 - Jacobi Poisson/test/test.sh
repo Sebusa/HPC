@@ -46,7 +46,8 @@ for size in ${mesh_size[@]}; do
     done
 done
 echo "done!"
-'
+''
+
 #Optimized by processes (?)
 : 'echo "Optimized by processes test in progress..."
 for size in ${mesh_size[@]}; do
