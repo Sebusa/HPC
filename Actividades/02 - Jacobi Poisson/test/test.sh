@@ -9,8 +9,9 @@
 mesh_size=(100000 500000 1000000 2000000 5000000 10000000)
 sweeps=(100 500 1000 2000 5000 10000)
 
+: '
 #serial processing
-: 'echo "Serial test in progress..."
+echo "Serial test in progress..."
 for size in ${mesh_size[@]}; do
     for iteration in ${sweeps[@]}; do
         echo "------------------" $size $iteration >> results/'Serial.out'
@@ -20,7 +21,7 @@ for size in ${mesh_size[@]}; do
     done
 done
 echo "done!"
-'
+
 #parallel processing
 echo "Parallel test in progress..."
 for size in ${mesh_size[@]}; do
@@ -36,7 +37,7 @@ done
 echo "done!"
 
 #optimized by compiler
-: 'echo "Optimized by compiler test in progress..."
+echo "Optimized by compiler test in progress..."
 for size in ${mesh_size[@]}; do
     for iteration in ${sweeps[@]}; do
         echo "------------------" $size $iteration >> results/'Optimized.out'
@@ -46,10 +47,9 @@ for size in ${mesh_size[@]}; do
     done
 done
 echo "done!"
-'
 
 #Optimized by processes (?)
-: 'echo "Optimized by processes test in progress..."
+echo "Optimized by processes test in progress..."
 for size in ${mesh_size[@]}; do
     for iteration in ${sweeps[@]}; do
         for process in 2 4 8; do
@@ -60,5 +60,15 @@ for size in ${mesh_size[@]}; do
         done
     done
 done
-echo "Finished!"
 '
+#OpenMP
+echo "OpenMP test in progress..."
+for size in ${mesh_size[@]}; do
+    for iteration in ${sweeps[@]}; do
+        echo "------------------" $size $iteration >> results/'OpenMP.out'
+        for i in {1..10}; do
+            run/./jacobiOpenMP $size $iteration >> results/'OpenMP.out'
+        done
+    done
+done
+echo "Finished!"

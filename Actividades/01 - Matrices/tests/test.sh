@@ -1,3 +1,4 @@
+: '
 #serial processing
 echo "Serial test in progress..."
 for size in 500 1000 1500 2000 2500 3000 3500 4000 5000; do
@@ -51,4 +52,15 @@ for size in 500 1000 1500 2000 2500 3000 3500 4000 5000; do
         done
     done
 done
+'
+
+#OpenMP processing
+echo "OpenMP test in progress..."
+for size in 500 1000 1500 2000 2500 3000 3500 4000 5000; do
+    echo "------------------" $size >>results/'OpenMP.out'
+    for i in {1..10}; do
+        run/./openMP $size >>results/'OpenMP.out'
+    done
+done
+echo "done!"
 echo "Finished!"
