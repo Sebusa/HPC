@@ -9,7 +9,7 @@ int **initialize(int n, int section) // Allocate memory for a matrix
 {
     int **matrix = (int **)malloc(n * sizeof(int *));
 
-    int row = (section == NULL) ? n : section;
+    int row = (section == 0) ? n : section;
     for (int i = 0; i < row; i++)
     {
         matrix[i] = (int *)malloc(n * sizeof(int));
@@ -70,9 +70,9 @@ int main(int argc, char **argv)
 
     if (rank == 0) // Process 0 initializes the matrices
     {
-        A = initialize(n, NULL);
-        B = initialize(n, NULL);
-        result = initialize(n, NULL);
+        A = initialize(n, 0);
+        B = initialize(n, 0);
+        result = initialize(n, 0);
 
         input(A, n);
         input(B, n);
@@ -89,7 +89,7 @@ int main(int argc, char **argv)
     int rowsPerProcess = ((n % size) == 0) ? n / size : (n / size) + 1;
 
     int **localA = initialize(n, rowsPerProcess);
-    int **localB = initialize(n, NULL);
+    int **localB = initialize(n, 0);
     int **localResult = initialize(n, rowsPerProcess);
 
     /*
