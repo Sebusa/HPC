@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <string.h>
 #include <mpi.h>
 
 // Functions declarations
@@ -96,9 +95,8 @@ int main(int argc, char **argv)
     Distribute the matrices to all the processes
     */
 
-    //Ni puta idea qué hace esto jsjs
-    MPI_Scatter(A, rowsPerProcess * n, MPI_INT, localA[0], rowsPerProcess * n, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(B[0], n * n, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Scatter(A, rowsPerProcess * n, MPI_INT, localA[0], rowsPerProcess * n, MPI_INT, 0, MPI_COMM_WORLD); // Scatter the matrix A
+    MPI_Bcast(B[0], n * n, MPI_INT, 0, MPI_COMM_WORLD); // Broadcast the matrix B
 
     // Local matrix multiplication
     bruteForce(localA, localB, localResult, 0, rowsPerProcess, n);
