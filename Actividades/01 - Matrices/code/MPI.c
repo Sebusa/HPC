@@ -106,12 +106,9 @@ int main(int argc, char **argv)
     // Gather the results from all the processes to the process 0
     MPI_Gather(localResult[0], rowsPerProcess * n, MPI_INT, result[0], rowsPerProcess * n, MPI_INT, 0, MPI_COMM_WORLD);
 
-    // El proceso 0 realiza las operaciones finales
+    // Final process
     if (rank == 0)
     {
-        // Guardar los resultados en un archivo de texto plano
-        // ...
-
         end_time = MPI_Wtime(); // End time
         printf("%f\n", end_time - start_time);
 
