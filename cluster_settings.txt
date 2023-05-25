@@ -1,0 +1,57 @@
+PASSWORD: cluster-HPCG1
+IP_PUBLIC: 52.170.57.174
+NODOS
+
+<-- SSH KP -->
+1. chmod 600 KP
+2. ssh -i KP node@IPaddress
+
+<-- password -->
+1,2. ssh node@IPaddress
+
+3. sudo apt-get update && sudo apt-get install mpich libomp-dev --yes
+4. sudo adduser nodeadmin
+5. sudo adduser nodeuser
+6. sudo visudo
+	nodeadmin ALL=(ALL:ALL) ALL
+7. sudo nano /etc/hosts
+	10.0.0.4 head
+	10.0.0.5 node01
+	10.0.0.6 node02
+	10.0.0.7 node03
+8. sudo nano /etc/ssh/sshd_config
+	PasswordAuthentication yes
+	UsePAM no
+
+NOTA: Cada nodo es igual. Intentar usar la misma PK. En caso de que falle, cada nodo un diferente PK.
+
+9. login as: nodeadmin
+	ssh nodeadmin@node_name
+10. sudo nano /etc/hostname
+	node_name
+11. reboot
+12. login as: nodeuser
+13. ssh-keygen -t rsa
+14. cat .ssh/id_rsa.pub >> .ssh/authorized_keys
+	mv authorized_keys .ssh/ (Opcional)
+	more .ssh/authorized_keys (test)
+
+Del paso 9 al 13 todos los nodos son igual
+Sólo el head hace el 14
+El resto de nodos hace lo siguiente:
+
+15. scp .ssh/id_rsa.pub nodeuser@head:/home/nodeuser/id_rsa_'node_name'.pub
+
+Finalmente:
+nodeuser@head
+
+16. cat id_rsa_'node_name'.pub >> .ssh/authorized_keys
+...
+17. scp .ssh/authorized_keys nodeuser@node_name:/home/nodeuser/.ssh/
+
+Desde head intentar conexión con cada nodo
+18. ssh node_name
+19. exit
+
+PRUEBA
+mpirun -n 8 -hosts node01,node02,node03 hostname

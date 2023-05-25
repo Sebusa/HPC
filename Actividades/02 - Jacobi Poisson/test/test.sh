@@ -1,13 +1,19 @@
 #/bin/bash
-: 'Parameters:
-- Mesh size: $size
-- Number of iterarions: $iterations
-- (Threads/Processes) number of threads/processes: $threads/$processes
-- (Optional) Output file name: $output
-'
-
 mesh_size=(100000 500000 1000000 2000000 5000000 10000000)
 sweeps=(100 500 1000 2000 5000 10000)
+cluster_nodes=4
+
+#MPI processing
+echo "MPI test in progress..."
+for size in ${mesh_size[@]}; do
+    for iteration in ${sweeps[@]}; do
+        echo "------------------" $size $iteration >> results/'Jacobi.out'
+        for i in {1..10}; do
+            mpirun --hostfile hosts -np $cluster_nodes ./Jacobi $size $iteration >> results/'Jacobi.out'
+        done
+    done
+done
+echo "done!"
 
 : '
 #serial processing
@@ -60,7 +66,7 @@ for size in ${mesh_size[@]}; do
         done
     done
 done
-'
+
 #OpenMP
 echo "OpenMP test in progress..."
 for size in ${mesh_size[@]}; do
@@ -72,3 +78,4 @@ for size in ${mesh_size[@]}; do
     done
 done
 echo "Finished!"
+'

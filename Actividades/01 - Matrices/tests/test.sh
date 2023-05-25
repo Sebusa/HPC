@@ -1,12 +1,12 @@
 matrix_size=(500 1000 1500 2000 2500 3000 3500 4000 5000)
-cluster_nodes = 4
+cluster_nodes=4
 
 #MPI processing
 echo "MPI test in progress..."
 for size in ${matrix_size[@]}; do
-    echo "------------------" $size >>results/'MPI.out'
+    echo "------------------" $size >>results/'Matrix.out'
     for i in {1..10}; do
-        mpirun -np $cluster_nodes ./MPI $size >>results/'MPI.out'
+        mpirun --hostfile hosts -np $cluster_nodes ./Matrix $size >>results/'Matrix.out'
     done
 done
 echo "done!"
@@ -76,5 +76,5 @@ for size in ${matrix_size[@]}; do
     done
 done
 echo "done!"
-'
 echo "Finished!"
+'
