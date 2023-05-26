@@ -9,7 +9,8 @@ NODOS
 <-- password -->
 1,2. ssh node@IPaddress
 
-3. sudo apt-get update && sudo apt-get install mpich libomp-dev --yes
+3. sudo apt-get update && sudo apt-get install openmpi-bin openmpi-common libopenmpi-dev
+ libomp-dev --yes
 4. sudo adduser nodeadmin
 5. sudo adduser nodeuser
 6. sudo visudo

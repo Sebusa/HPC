@@ -5,74 +5,8 @@
 #include <string.h>
 
 // Functions declarations
-int **initialize(int n);
-void input(int **matrix, int n);
-void bruteForce(int **A, int **B, int **result, int n);
-void printResult(int **matrix, int n);
 
-// CMD arguments
-int main(int argc, char *argv[])
-{
-    if (argc >= 2)
-    {
-        srand(time(NULL)); // Random seed
-
-        // CPU clock
-        clock_t start, end;
-        double cpu_time_used;
-        start = clock();
-
-        // Matrix declaration
-        int n = atoi(argv[1]);
-        int **a, **b;
-
-        a = initialize(n);
-        b = initialize(n);
-
-        input(a, n);
-        input(b, n);
-
-        int **result;
-        result = initialize(n);
-
-        // Matrix multiplication with O(n^3) algorithm
-        bruteForce(a, b, result, n);
-
-        if (argc == 3)
-        {
-            if (strcmp(argv[2], "print") == 0)
-            {
-                printf("\nThe matrix A is:\n");
-                printResult(a, n);
-
-                printf("\nThe matrix B is:\n");
-                printResult(b, n);
-
-                printf("\nThe result is:\n");
-                printResult(result, n);
-            }
-            else
-            {
-                printf("You must put 'print' as your printer argument!\n");
-            }
-        }
-
-        // End clock
-        end = clock();
-        cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
-        printf("%f\n", cpu_time_used);
-
-        // Free memory
-        for (int i = 0; i < n; i++)
-        {
-            free(a[i]);
-            free(b[i]);
-            free(result[i]);
-        }
-    }
-    return 0;
-}
-
+// Algorithm O(n^3)
 void bruteForce(int **A, int **B, int **result, int n)
 {
     for (int i = 0; i < n; i++)
@@ -110,14 +44,43 @@ void input(int **matrix, int n)
     }
 }
 
-void printResult(int **matrix, int n)
+// CMD arguments
+int main(int argc, char *argv[])
 {
+    srand(time(NULL)); // Random seed
+
+    // CPU clock
+    clock_t start, end;
+    double cpu_time_used;
+    start = clock();
+
+    // Matrix declaration
+    int n = (argc > 1) ? atoi(argv[1]) : 1000;
+    int **a, **b;
+
+    a = initialize(n);
+    b = initialize(n);
+
+    input(a, n);
+    input(b, n);
+
+    int **result;
+    result = initialize(n);
+
+    // Matrix multiplication with O(n^3) algorithm
+    bruteForce(a, b, result, n);
+
+    // End clock
+    end = clock();
+    cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
+    printf("%f\n", cpu_time_used);
+
+    // Free memory
     for (int i = 0; i < n; i++)
     {
-        for (int j = 0; j < n; j++)
-        {
-            printf("%d\t", matrix[i][j]);
-        }
-        printf("\n");
+        free(a[i]);
+        free(b[i]);
+        free(result[i]);
     }
+    return 0;
 }
