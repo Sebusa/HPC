@@ -1,11 +1,11 @@
-// Jacobi iteration for the Poisson equation in 1D with MPI
+// Jacobi iteration for the Poisson equation in 1D
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <mpi.h>
 
 /* Function to perform nsweeps sweeps of Jacobi iteration on a 1D Poisson problem */
-void jacobi(int nsweeps, int n, double *u, double *f, int rank, int size)
+void jacobi(int nsweeps, int n, double *u, double *f)
 {
     /* Declare variables */
     int i, sweep;
@@ -24,17 +24,6 @@ void jacobi(int nsweeps, int n, double *u, double *f, int rank, int size)
         for (i = 1; i < n; ++i)
             utmp[i] = (u[i - 1] + u[i + 1] + h2 * f[i]) / 2;
 
-        // Communication between processes
-        if (rank > 0)
-            MPI_Send(&utmp[1], 1, MPI_DOUBLE, rank - 1, 0, MPI_COMM_WORLD);
-        if (rank < size - 1)
-            MPI_Send(&utmp[n - 1], 1, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD);
-
-        if (rank > 0)
-            MPI_Recv(&utmp[0], 1, MPI_DOUBLE, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        if (rank < size - 1)
-            MPI_Recv(&utmp[n], 1, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
         /* Old data in utmp; new data in u */
         for (i = 1; i < n; ++i)
             u[i] = (utmp[i - 1] + utmp[i + 1] + h2 * f[i]) / 2;
@@ -47,66 +36,78 @@ void jacobi(int nsweeps, int n, double *u, double *f, int rank, int size)
 int main(int argc, char **argv)
 {
     /* Declare variables */
-    int n, nsteps;       // grid size and number of steps
-    double *u, *f;       // solution and RHS
-    double h;            // step size
-    int rank, size;      // MPI variables
-    char *fname;         // file name
+    int n, nsteps; // grid size and number of steps
+    double h;      // step size
+
+    double *u, *f; // solution and RHS
+
+    double *local_u, *local_f;  // local solution and RHS
+    int local_size, size, rank; // MPI variables
+
     double tstart, tend; // timers
+
+    /* Process command line arguments */
+    n = (argc > 1) ? atoi(argv[1]) : 100000;
+    nsteps = (argc > 2) ? atoi(argv[2]) : 100;
 
     /* Initialize MPI */
     MPI_Init(&argc, &argv);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    /* Process command line arguments */
-    n = (argc > 1) ? atoi(argv[1]) : 1000;
-    nsteps = (argc > 2) ? atoi(argv[2]) : 100;
-    h = 1.0 / n;
+    local_size = n / size;
 
-    /* Calculate local size */
-    int local_n = n / size;
-    int local_start = rank * local_n;
-    int local_end = local_start + local_n - 1;
+    /* Allocate memory for arrays */
+    local_f = (double *)malloc((local_size + 1) * sizeof(double));
+    local_u = (double *)malloc((local_size + 1) * sizeof(double));
 
     if (rank == 0)
     {
-        /* Allocate memory for local arrays */
-        u = (double *)malloc((local_n + 1) * sizeof(double));
-        f = (double *)malloc((local_n + 1) * sizeof(double));
+        u = (double *)malloc((n + 1) * sizeof(double));
+        f = (double *)malloc((n + 1) * sizeof(double));
 
-        /* Initialize local arrays */
-        memset(u, 0, (local_n + 1) * sizeof(double));
-        for (int i = 0; i <= local_n; ++i)
-            f[i] = (i + local_start) * h;
+        /* Initialize arrays */
+        h = 1.0 / n;
+        memset(u, 0, (n + 1) * sizeof(double));
+        for (int i = 0; i <= n; ++i)
+            f[i] = i * h;
+    }
 
-        tstart = MPI_Wtime();
+    /* Distribute data */
+    MPI_Scatter(f, local_size, MPI_DOUBLE, local_f, local_size, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Scatter(u, local_size, MPI_DOUBLE, local_u, local_size, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    /* Broadcast */
+    MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&nsteps, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+    if (rank == 0)
+    {
+        tstart = MPI_Wtime(); // start timer
     }
 
     /* Perform Jacobi iteration */
-    jacobi(nsteps, local_n, u, f, rank, size);
+    jacobi(nsteps, local_size, local_u, local_f);
 
-    /* Gather results from all processes */
-    double *global_u = NULL;
+    /* Gather data */
+    MPI_Gather(local_u, local_size, MPI_DOUBLE, u, local_size, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
     if (rank == 0)
     {
-        global_u = (double *)malloc((n + 1) * sizeof(double));
+        tend = MPI_Wtime(); // stop timer
+        double cpu_time_used = tend - tstart;
+
+        /* Print results */
+        printf("%f\n", cpu_time_used);
     }
 
-    MPI_Gather(u, local_n, MPI_DOUBLE, global_u, local_n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
-    /* Print results */
+    /* Free memory allocated for arrays */
+    free(local_f);
+    free(local_u);
     if (rank == 0)
     {
-        tend = MPI_Wtime();
-        printf("%f\n", tend - tstart);
-
-        /* Free memory allocated for arrays */
-        free(global_u);
-
-        /* Free memory allocated for local arrays */
-        free(f);
         free(u);
+        free(f);
     }
 
     /* Finalize MPI */
