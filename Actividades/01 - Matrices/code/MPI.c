@@ -5,6 +5,8 @@
 
 void bruteForce(int *A, int *B, int *result, int n)
 {
+    printf("Inicio Algoritmo.\n");
+
     for (int i = 0; i < n; i++)
     {
         for (int j = 0; j < n; j++)
@@ -16,6 +18,7 @@ void bruteForce(int *A, int *B, int *result, int n)
             }
         }
     }
+    printf("Fin Algoritmo.\n");
 }
 
 int *initialize(int x, int y)
@@ -76,6 +79,7 @@ int main(int argc, char *argv[])
 
     // Broadcast matrix b
     MPI_Bcast(b, n * n, MPI_INT, 0, MPI_COMM_WORLD);
+
     printf("Cast\n");
 
     // Start timing
