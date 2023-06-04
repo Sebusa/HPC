@@ -1,37 +1,58 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
 #include <mpi.h>
 
-void bruteForce(int *A, int *B, int *result, int size, int n)
+int **initialize(int n)
 {
+    int **matrix = (int **)malloc(n * sizeof(int *));
+    for (int i = 0; i < n; i++)
+    {
+        matrix[i] = (int *)malloc(n * sizeof(int));
+    }
+    return matrix;
+}
 
-    for (int i = 0; i < size; i++)
+void input(int **matrix, int n)
+{
+    // Random input
+    for (int i = 0; i < n; i++)
     {
         for (int j = 0; j < n; j++)
         {
-            result[i * size + j] = 0;
-            for (int k = 0; k < n; k++)
-            {
-                result[i * size + j] += A[i * size + k] * B[k * n + j];
-            }
+            matrix[i][j] = 1 + rand() % 9;
         }
     }
 }
 
-int *initialize(int x, int y)
+// Transpose matrix
+int **transpose(int **matrix, int n)
 {
-    int *matrix;
-    matrix = (int *)malloc(x * y * sizeof(int *));
-    return matrix;
+    int **transposed = initialize(n);
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            transposed[i][j] = matrix[j][i];
+        }
+    }
+    return transposed;
 }
 
-void input(int *matrix, int n)
+// Algorithm row by row. Apply the memory optimization to avoid cache misses
+void bruteForce(int **A, int **B, int **result, int n, int start_row, int end_row)
 {
-    // Random input
-    for (int i = 0; i < n * n; i++)
+    for (int i = start_row; i < end_row; i++)
     {
-        matrix[i] = 1 + rand() % 9;
+        for (int j = 0; j < n; j++)
+        {
+            result[i][j] = 0;
+            for (int k = 0; k < n; k++)
+            {
+                result[i][j] += A[i][k] * B[k][j];
+            }
+        }
     }
 }
 
@@ -39,71 +60,59 @@ int main(int argc, char *argv[])
 {
     srand(time(NULL)); // Random seed
 
-    double start_time, end_time; // Timing variables
-
-    int *a, *b, *result;                       // Input matrices and result matrix
+    int **a, **b, **result;                    // Matrixes
     int n = (argc > 1) ? atoi(argv[1]) : 1000; // Matrix size
-    int size, rank, local_size;                // MPI variables
 
-    // Initialize matrices
-    a = initialize(n, n);
-    b = initialize(n, n);
-    result = initialize(n, n);
+    // Allocate memory for matrices
+    a = initialize(n);
+    b = initialize(n);
+    result = initialize(n);
 
-    // Initialize matrices a and b with random values
     input(a, n);
     input(b, n);
+    b = transpose(b, n);
 
-    MPI_Init(&argc, &argv); // Initialize MPI
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    // Initialize MPI
+    MPI_Init(&argc, &argv);
+
+    // Get the rank of the current process and the total number of processes
+    int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    // Local size of each process (except head process)
-    local_size = n / size;
+    // CPU clock
+    double start_time, end_time;
+    start_time = MPI_Wtime();
 
-    // Initialize local matrices
-    int *local_a = initialize(local_size, n);
-    int *local_result = initialize(local_size, n);
+    // Broadcast matrix B to all processes
+    MPI_Bcast(&b[0][0], n * n, MPI_INT, 0, MPI_COMM_WORLD);
 
-    // Head process
-    if (rank == 0)
+    // Calculate the number of rows each process will handle
+    int rows_per_process = n / size;
+    int start_row = rank * rows_per_process;
+    int end_row = start_row + rows_per_process;
+
+    // Last process takes care of any remaining rows
+    if (rank == size - 1 && end_row < n)
     {
-        start_time = MPI_Wtime(); // Start timer
+        end_row = n;
     }
 
-    // Scatter matrix A to each process
-    MPI_Scatter(a, local_size * n, MPI_INT, local_a, local_size * n, MPI_INT, 0, MPI_COMM_WORLD);
+    // Each process multiplies its assigned rows
+    bruteForce(a, b, result, n, start_row, end_row);
 
-    // Broadcast matrix B and local_size to each process
-    MPI_Bcast(b, n * n, MPI_INT, 0, MPI_COMM_WORLD);
+    // Gather results from all processes to process 0
+    MPI_Gather(&result[start_row][0], (end_row - start_row) * n, MPI_INT, &result[0][0], (end_row - start_row) * n, MPI_INT, 0, MPI_COMM_WORLD);
 
-    // Matrix multiplication
-    printf("Antes\n");
-    printf("%d %d\n", local_size, n);
-    bruteForce(local_a, b, local_result, local_size, n);
-    printf("Algoritmo %d\n", rank);
-
-    // Gather result from each process
-    MPI_Gather(local_result, local_size * n, MPI_INT, result, local_size * n, MPI_INT, 0, MPI_COMM_WORLD);
-    printf("Gather %d\n", rank);
-
-    // Free local matrices
-    free(local_a);
-    free(local_result);
-
-    // End timing
+    // Process 0 prints the total execution time
     if (rank == 0)
     {
         end_time = MPI_Wtime();
-        double total_time = end_time - start_time;
-        printf("%f\n", total_time);
-
-        // Free matrices
-        free(a);
-        free(b);
-        free(result);
+        printf("%f\n", end_time - start_time);
     }
 
-    MPI_Finalize(); // Finalize MPI
+    // Finalize MPI
+    MPI_Finalize();
+
     return 0;
 }

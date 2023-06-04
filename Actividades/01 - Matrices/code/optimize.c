@@ -4,57 +4,7 @@
 #include <time.h>
 #include <string.h>
 
-// Functions declarations
-int **initialize(int n);
-void input(int **matrix, int n);
-void bruteForce(int **A, int **B, int **result, int n);
-int **transpose(int **matrix, int n);
-
-// CMD arguments
-int main(int argc, char *argv[])
-{
-    if (argc >= 2)
-    {
-        srand(time(NULL)); // Random seed
-        // CPU clock
-        clock_t start, end;
-        double cpu_time_used;
-        start = clock();
-
-        // Matrix declaration
-        int n = atoi(argv[1]);
-        int **a, **b;
-
-        a = initialize(n);
-        b = initialize(n);
-
-        b = transpose(b, n);
-
-        input(a, n);
-        input(b, n);
-
-        int **result;
-        result = initialize(n);
-
-        // Matrix multiplication with O(n^3) algorithm
-        bruteForce(a, b, result, n);
-
-        // End clock
-        end = clock();
-        cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
-        printf("%f\n", cpu_time_used);
-
-        // Free memory
-        for (int i = 0; i < n; i++)
-        {
-            free(a[i]);
-            free(b[i]);
-            free(result[i]);
-        }
-    }
-    return 0;
-}
-
+/* Functions declarations */
 // Transpose matrix
 int **transpose(int **matrix, int n)
 {
@@ -105,4 +55,47 @@ void input(int **matrix, int n)
             matrix[i][j] = 1 + rand() % 9;
         }
     }
+}
+
+// CMD arguments
+int main(int argc, char *argv[])
+{
+    srand(time(NULL)); // Random seed
+    // CPU clock
+    clock_t start, end;
+    double cpu_time_used;
+    start = clock();
+
+    // Matrix declaration
+    int n = (argc > 1) ? atoi(argv[1]) : 1000;
+    int **a, **b;
+
+    a = initialize(n);
+    b = initialize(n);
+
+    b = transpose(b, n);
+
+    input(a, n);
+    input(b, n);
+
+    int **result;
+    result = initialize(n);
+
+    // Matrix multiplication with O(n^3) algorithm
+    bruteForce(a, b, result, n);
+
+    // End clock
+    end = clock();
+    cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
+    printf("%f\n", cpu_time_used);
+
+    // Free memory
+    for (int i = 0; i < n; i++)
+    {
+        free(a[i]);
+        free(b[i]);
+        free(result[i]);
+    }
+    
+    return 0;
 }
