@@ -56,3 +56,5 @@ Desde head intentar conexión con cada nodo
 
 PRUEBA
 mpirun -n 8 -hosts node01,node02,node03 hostname
+
+scp Matrix node01:/home/nodeuser/ node02:/home/nodeuser/ node03:/home/nodeuser/

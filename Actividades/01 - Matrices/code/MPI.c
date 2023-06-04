@@ -3,22 +3,20 @@
 #include <time.h>
 #include <mpi.h>
 
-void bruteForce(int *A, int *B, int *result, int n)
+void bruteForce(int *A, int *B, int *result, int size, int n)
 {
-    printf("Inicio Algoritmo.\n");
 
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < size; i++)
     {
         for (int j = 0; j < n; j++)
         {
-            result[i * n + j] = 0;
+            result[i * size + j] = 0;
             for (int k = 0; k < n; k++)
             {
-                result[i * n + j] += A[i * n + k] * B[k * n + j];
+                result[i * size + j] += A[i * size + k] * B[k * n + j];
             }
         }
     }
-    printf("Fin Algoritmo.\n");
 }
 
 int *initialize(int x, int y)
@@ -43,59 +41,55 @@ int main(int argc, char *argv[])
 
     double start_time, end_time; // Timing variables
 
-    int *a, *b, *result;         // Input matrices and result matrix
-    int *local_a, *local_result; // Local matrices
-
+    int *a, *b, *result;                       // Input matrices and result matrix
     int n = (argc > 1) ? atoi(argv[1]) : 1000; // Matrix size
-    int size, rank;                            // MPI variables
+    int size, rank, local_size;                // MPI variables
+
+    // Initialize matrices
+    a = initialize(n, n);
+    b = initialize(n, n);
+    result = initialize(n, n);
+
+    // Initialize matrices a and b with random values
+    input(a, n);
+    input(b, n);
 
     MPI_Init(&argc, &argv); // Initialize MPI
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    printf("Inicio\n");
 
-    int local_size = n / size;
+    // Local size of each process (except head process)
+    local_size = n / size;
 
-    // Allocate memory for local matrices
-    local_a = initialize(local_size, n);
-    local_result = initialize(local_size, n);
+    // Initialize local matrices
+    int *local_a = initialize(local_size, n);
+    int *local_result = initialize(local_size, n);
 
-    // Only rank 0 will have the full matrices a and b
+    // Head process
     if (rank == 0)
     {
-        a = initialize(n, n);
-        b = initialize(n, n);
-        result = initialize(n, n);
-
-        // Initialize matrices a and b with random values
-        input(a, n);
-        input(b, n);
+        start_time = MPI_Wtime(); // Start timer
     }
-    printf("matrices\n");
 
-    // Scatter matrix a
+    // Scatter matrix A to each process
     MPI_Scatter(a, local_size * n, MPI_INT, local_a, local_size * n, MPI_INT, 0, MPI_COMM_WORLD);
-    printf("A\n");
 
-    // Broadcast matrix b
+    // Broadcast matrix B and local_size to each process
     MPI_Bcast(b, n * n, MPI_INT, 0, MPI_COMM_WORLD);
 
-    printf("Cast\n");
+    // Matrix multiplication
+    printf("Antes\n");
+    printf("%d %d\n", local_size, n);
+    bruteForce(local_a, b, local_result, local_size, n);
+    printf("Algoritmo %d\n", rank);
 
-    // Start timing
-    if (rank == 0)
-    {
-        start_time = MPI_Wtime();
-        printf("Tiempo\n");
-    }
-
-    // Perform matrix multiplication
-    bruteForce(local_a, b, local_result, local_size);
-    printf("Algoritmo\n");
-
-    // Gather results
+    // Gather result from each process
     MPI_Gather(local_result, local_size * n, MPI_INT, result, local_size * n, MPI_INT, 0, MPI_COMM_WORLD);
-    printf("resultados\n");
+    printf("Gather %d\n", rank);
+
+    // Free local matrices
+    free(local_a);
+    free(local_result);
 
     // End timing
     if (rank == 0)
@@ -103,20 +97,13 @@ int main(int argc, char *argv[])
         end_time = MPI_Wtime();
         double total_time = end_time - start_time;
         printf("%f\n", total_time);
-    }
 
-    // Free memory
-    free(local_a);
-    free(local_result);
-    if (rank == 0)
-    {
+        // Free matrices
         free(a);
         free(b);
         free(result);
     }
-    printf("Fin\n");
 
     MPI_Finalize(); // Finalize MPI
-
     return 0;
 }
