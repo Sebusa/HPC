@@ -6,9 +6,21 @@ cluster_nodes=4
 echo "MPI test in progress..."
 for size in ${array_size[@]}; do
     for i in ${iterations[@]}; do
-        echo "------------------" $size $i >>results/'Matrix.out'
+        echo "------------------" $size $i >>results/'mpi.out'
         for i in {1..10}; do
-            mpirun --hostfile hosts -np $cluster_nodes ./Matrix $size $i >>results/'cellular.out'
+            mpirun --hostfile hosts -np $cluster_nodes ./mpi $size $i >>results/'mpi.out'
+        done
+    done
+done
+echo "done!"
+
+#MPI processing
+echo "serial test in progress..."
+for size in ${array_size[@]}; do
+    for i in ${iterations[@]}; do
+        echo "------------------" $size $i >>results/'cellular.out'
+        for i in {1..10}; do
+            ./serial $size $i >>results/'cellular.out'
         done
     done
 done
