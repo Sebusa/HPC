@@ -7,7 +7,7 @@ echo "MPI test in progress..."
 for size in ${array_size[@]}; do
     for i in ${iterations[@]}; do
         echo "------------------" $size $i >>results/'mpi.out'
-        for i in {1..10}; do
+        for i in {1..3}; do
             mpirun --hostfile hosts -np $cluster_nodes ./mpi $size $i >>results/'mpi.out'
         done
     done
@@ -18,9 +18,9 @@ echo "done!"
 echo "serial test in progress..."
 for size in ${array_size[@]}; do
     for i in ${iterations[@]}; do
-        echo "------------------" $size $i >>results/'cellular.out'
-        for i in {1..10}; do
-            ./serial $size $i >>results/'cellular.out'
+        echo "------------------" $size $i >>results/'serial.out'
+        for i in {1..3}; do
+            ./serial $size $i >>results/'serial.out'
         done
     done
 done
